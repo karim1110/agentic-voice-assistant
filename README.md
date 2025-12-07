@@ -1,264 +1,397 @@
 # Agentic Voice-to-Voice Product Discovery Assistant
 
-End-to-end demo: voice input → agentic planning with LangGraph → RAG over Amazon 2020 slice via MCP → optional live web comparison → grounded, cited answer → TTS playback.
+**Final Project - Generative AI Course**
 
+End-to-end voice-to-voice AI assistant for e-commerce product discovery using multi-agent orchestration, RAG, and MCP tools.
 
-### **Phase 1 — Complete Pipeline**
-
-Voice-to-Voice · RAG + Web Hybrid · MCP-Powered Agents
-
----
-
-## 🚀 Overview
-
-This project implements an **agentic multimodal product search assistant** using:
-
-* **LangGraph** for multi-step agent orchestration
-* **HuggingFace Amazon 2020 dataset** (15 columns — no rating, no reviews)
-* **ChromaDB** vector index
-* **MCP server** exposing RAG + Web Search tools
-* **Brave Search API**
-* **Whisper ASR** for speech
-* **OpenAI TTS** for final spoken answers
-* **Streamlit UI** for a voice-to-voice demo
-
-The system takes a user’s voice input → converts to text → interprets intent → fetches products via RAG and/or web search → returns an answer → speaks the answer back.
-
-**Phase 1 is 100% implemented and working.**
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-0.2.37-green.svg)](https://langchain-ai.github.io/langgraph/)
 
 ---
 
-# 📁 Project Structure
+## 🎯 Project Overview
+
+This system implements a sophisticated **multi-agent AI assistant** that:
+
+- 🎤 **Accepts voice queries** via Whisper ASR
+- 🧠 **Reasons with 5 specialized agents** orchestrated by LangGraph  
+- 📚 **Retrieves from private catalog** (Amazon 2020 dataset via RAG)
+- 🌐 **Augments with live web data** when needed (Brave Search)
+- ✅ **Ensures grounding & safety** with citation tracking and validation
+- 🔊 **Responds naturally** via OpenAI TTS
+
+**Example interaction**:
+```
+User (voice): "Recommend an eco-friendly stainless steel cleaner under $15"
+           ↓
+    [Agent Pipeline processes request]
+           ↓
+System (voice): "I found two eco-friendly options. My top pick is EcoShine 
+                 Steel Polish at $12.49—plant-based formula. See details 
+                 on screen. (Sources: doc #A001, doc #A002)"
+```
+
+---
+
+## 🚀 Quick Start (uv venv)
+
+```bash
+# 1) Install uv (if missing)
+pip install uv  # or brew install uv
+
+# 2) Create & activate venv (mac/Linux)
+uv venv .venv
+source .venv/bin/activate
+
+# 3) Install deps with uv
+uv pip install -r requirements.txt
+brew install ffmpeg  # required for Whisper
+
+# 4) Configure
+cp configs/env.example .env
+# Edit .env: set OPENAI_API_KEY
+# Optional for Kaggle CLI: set KAGGLE_USERNAME and KAGGLE_KEY
+
+# 5) Build index (sample data or Kaggle data)
+bash scripts/build_index.sh
+
+# 6) Run (2 terminals)
+# Terminal 1
+PYTHONPATH="$PWD" .venv/bin/uvicorn mcp_server.server:app --host 127.0.0.1 --port 8000
+# Terminal 2
+PYTHONPATH="$PWD" .venv/bin/streamlit run app/ui_streamlit.py --server.port 8501
+
+# 7) Open browser: http://localhost:8501
+```
+
+---
+
+## 📊 System Architecture
+
+### Multi-Agent Pipeline (LangGraph)
+
+```
+┌────────────┐    ┌───────────┐    ┌──────────────┐
+│   ROUTER   │───▶│  PLANNER  │───▶│  RETRIEVER   │
+│            │    │           │    │              │
+│ Extract    │    │ Design    │    │ Call MCP     │
+│ Intent     │    │ Strategy  │    │ Tools        │
+└────────────┘    └───────────┘    └──────────────┘
+                                            │
+                                            ▼
+                                    ┌──────────────┐
+                                    │   MCP TOOLS  │
+                                    ├──────────────┤
+                                    │ rag.search   │
+                                    │ web.search   │
+                                    └──────────────┘
+                                            │
+        ┌───────────┐    ┌───────────┐    ▼
+        │  CRITIC   │◀───│ ANSWERER  │◀───┘
+        │           │    │           │
+        │ Validate  │    │ Synthesize│
+        │ Ground    │    │ Response  │
+        └───────────┘    └───────────┘
+```
+
+### Agent Responsibilities
+
+| Agent | LLM Used | Purpose | Key Features |
+|-------|----------|---------|-------------|
+| **Router** | ✓ | Extract intent, constraints, safety flags | JSON output, regex fallback |
+| **Planner** | ✓ | Decide sources, build filters, set ranking | Strategy design, rule fallback |
+| **Retriever** | ✗ | Execute MCP tool calls | HTTP error handling, logging |
+| **Answerer** | ✓ | Synthesize grounded response | Reconciliation, citations |
+| **Critic** | ✗ | Validate safety, grounding, citations | 6-check validation system |
+
+**See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed diagrams and component specifications.**
+
+---
+
+## 📁 Project Structure
 
 ```
 agentic-voice-assistant/
-│
-├── app/
-│   ├── ui_streamlit.py               # Main Streamlit voice UI
-│   ├── audio_utils.py                # (optional placeholder)
-│   └── components.py                 # (optional placeholder)
-│
+├── app/                             # Streamlit UI
+│   ├── ui_streamlit.py              # Main application
+│   ├── audio_utils.py               # Audio processing
+│   └── components.py                # UI components
 ├── configs/
-│   └── env.example
-│
+│   └── env.example                  # Configuration template
 ├── data/
-│   ├── processed/products.csv        # HF Amazon 2020 dataset (15 cols)
-│   └── index/                        # Chroma DB (auto-created)
-│
-├── graph/
-│   ├── langgraph_pipeline.py
-│   ├── schemas.py
-│   └── nodes/
+│   ├── DATASET_SETUP.md             # Dataset download guide
+│   ├── processed/                   # Processed CSV
+│   └── index/                       # ChromaDB vector store
+├── graph/                           # Agent pipeline
+│   ├── langgraph_pipeline.py        # LangGraph orchestration
+│   ├── llm_client.py                # Model-agnostic LLM interface
+│   ├── schemas.py                   # State schemas
+│   └── nodes/                       # 5 agent implementations
 │       ├── router.py
 │       ├── planner.py
 │       ├── retriever.py
 │       ├── answerer.py
 │       └── critic.py
-│
 ├── indexing/
-│   └── build_index.py                # Build HF→Chroma vector index
-│
-├── mcp_server/
-│   ├── server.py                     # FastAPI MCP server
+│   └── build_index.py               # Vector index creation
+├── mcp_server/                      # MCP tool server
+│   ├── server.py                    # FastAPI server
 │   └── tools/
-│       ├── rag_tool.py
-│       └── web_tool.py
-│
-├── prompts/
-│   ├── system_router.md
-│   ├── system_planner.md
-│   ├── system_answerer.md
-│   └── tool_call_instructions.md     # (empty for Phase 1)
-│
+│       ├── rag_tool.py              # Private catalog search
+│       └── web_tool.py              # Web search
+├── prompts/                         # ⭐ Full prompt disclosure
+│   ├── system_router.md             # 80+ lines
+│   ├── system_planner.md            # 100+ lines
+│   ├── system_answerer.md           # 120+ lines
+│   ├── system_critic.md             # 90+ lines
+│   ├── tool_call_instructions.md    # 150+ lines
+│   └── few_shots.jsonl              # 5 examples
 ├── scripts/
-│   ├── build_index.sh
-│   ├── run_mcp.sh
-│   └── run_ui.sh
-│
-└── tts_asr/
-    ├── asr_whisper.py
-    └── tts_client.py
+│   ├── build_index.sh               # Build vector index
+│   ├── run_mcp.sh                   # Start MCP server
+│   └── run_ui.sh                    # Start UI
+├── tts_asr/
+│   ├── asr_whisper.py               # Whisper ASR
+│   └── tts_client.py                # OpenAI TTS
+├── ARCHITECTURE.md                  # Detailed system design
+├── DEMO_GUIDE.md                    # Setup & demo instructions
+├── SAFETY.md                        # Safety considerations
+└── requirements.txt                 # Dependencies
 ```
 
 ---
 
-# 🔧 Installation & Setup
+## 🔧 Installation & Setup
 
-### 1️⃣ Create environment
+### Prerequisites
+
+- Python 3.10+
+- ffmpeg (for Whisper ASR)
+- 4GB+ RAM
+- OpenAI API key
+
+### Step-by-Step (uv-first)
 
 ```bash
-conda create -n GenAI python=3.10 -y
-conda activate GenAI
-pip install -r requirements.txt
+# 1. Clone and create environment
+git clone <repo-url>
+cd agentic-voice-assistant
+pip install uv  # if uv not installed
+uv venv .venv
+source .venv/bin/activate
+
+# 2. Install dependencies
+uv pip install -r requirements.txt
+
+# 3. Install ffmpeg
+brew install ffmpeg  # macOS
+# OR: sudo apt-get install ffmpeg  # Linux
+
+# 4. Configure API keys
+cp configs/env.example .env
+nano .env  # Add OPENAI_API_KEY; optional: KAGGLE_USERNAME, KAGGLE_KEY
+
+# 5. Download dataset
+# See data/DATASET_SETUP.md for Kaggle CLI usage (needs username + key)
+
+# 6. Build vector index
+PYTHONPATH="$PWD" .venv/bin/python indexing/build_index.py
+
+# 7. Verify setup
+.venv/bin/python - <<'PY'
+import chromadb
+client = chromadb.PersistentClient(path='./data/index')
+col = client.get_collection('amazon2020')
+print(f'✓ Indexed {col.count()} documents')
+PY
 ```
 
 ---
 
-### 2️⃣ Add environment variables
+## 🎮 Usage
 
-Create `.env` using `configs/env.example` as a reference:
+### Start Services
 
-```
-OPENAI_API_KEY=
-BRAVE_API_KEY=
-SEARCH_PROVIDER=brave
-
-EMBED_MODEL=all-MiniLM-L6-v2
-GEN_MODEL=openai/gpt-4o-mini
-
-ASR_MODEL=small
-TTS_PROVIDER=openai
-TTS_VOICE=alloy
-
-INDEX_PATH=./data/index
-DATA_PRODUCTS=./data/processed/products.csv
-
-MCP_BASE=http://127.0.0.1:8000
-```
-
----
-
-# 📦 Phase 1 Components
-
-## 1️⃣ HF Dataset → Chroma Index
-
-`indexing/build_index.py`:
-
-* Renames HF fields:
-  `Uniq Id → id`, `Product Name → title`, `Selling Price → price`, etc.
-* Cleans price (`$` removal → float)
-* Extracts `price_per_oz` if possible
-* Ensures **all metadata is Chroma-safe**
-* Adds docs to collection `amazon2020`
-
-Build index:
-
-```bash
-bash scripts/build_index.sh
-```
-
----
-
-## 2️⃣ MCP Server (Tools)
-
-Start MCP:
-
+**Terminal 1: MCP Server**
 ```bash
 bash scripts/run_mcp.sh
+# Expected: INFO: Uvicorn running on http://127.0.0.1:8000
 ```
 
-### Tools exposed:
-
-#### `/rag.search`
-
-* Semantic search (SentenceTransformer)
-* Optional price filters (`lte` / `gte`)
-* Output fields:
-
-  * `doc_id`
-  * `title`
-  * `price`
-  * `brand` (placeholder)
-  * `sku`
-
-#### `/web.search`
-
-* Brave Web API
-* Returns:
-
-  * `title`
-  * `url`
-  * `snippet`
-  * `profile`
-
-Test:
-
-```bash
-curl -X POST http://127.0.0.1:8000/rag.search \
-  -H "Content-Type: application/json" \
-  -d '{"query":"stainless steel cleaner"}'
-```
-
----
-
-## 3️⃣ Agent Workflow (LangGraph)
-
-Workflow:
-`router → planner → retriever → answerer → critic`
-
-### router
-
-* Classifies intent
-* Decides:
-
-  * RAG only
-  * Web only
-  * Both
-* Extracts filters (brand, price)
-
-### planner
-
-* Ensures filters match HF (price only)
-* Decides tool list
-
-### retriever
-
-* Calls MCP endpoints
-* Stores RAG/Web evidence
-
-### answerer
-
-* HF dataset contains **NO ratings, ingredients, reviews**
-* So answerer uses:
-
-  * `title`
-  * `price`
-  * `brand` (empty)
-* Sorts by **price only**
-* Generates citations
-
-### critic
-
-* Placeholder for Phase 2 enhancements
-
----
-
-## 4️⃣ Voice UI (Streamlit)
-
-Run UI:
-
+**Terminal 2: Streamlit UI**
 ```bash
 bash scripts/run_ui.sh
+# Expected: Local URL: http://localhost:8501
 ```
 
-Features:
+### Using the Interface
 
-* Audio recording
-* Whisper ASR
-* Multi-agent reasoning
-* Product results table
-* Citations
-* OpenAI TTS playback
+1. Open browser: http://localhost:8501
+2. Choose input: Voice recording OR typed text
+3. Submit query: Click "Transcribe & Search"
+4. View results:
+   - Agent step log (decision transparency)
+   - Product table with details
+   - Citations (doc IDs + web URLs)
+5. Play TTS: Click "🔊 Play TTS"
 
-Open browser:
+### Example Queries
 
 ```
-http://localhost:8501
+✅ "Recommend an eco-friendly stainless steel cleaner under $15"
+   → RAG only, budget filter, sorted by price
+
+✅ "What's the current price of Lysol spray in stock?"
+   → RAG + Web, price comparison, availability check
+
+✅ "Find Scotch-Brite heavy duty scrub pads"
+   → Brand-specific search, semantic matching
+
+❌ "Can I mix bleach and ammonia?"
+   → Safety rejection, refusal message
 ```
 
 ---
 
-# 🔥 Next: Phase 2 Enhancements
+## 📝 Prompts & Agent Design
 
-Coming next:
+### Prompt Disclosure (Grading Requirement)
 
-* Tool Normalization Layer
-* Conflict resolution engine
-* Web–RAG merge logic
-* Better product ranking
-* Metadata extraction from web
-* Price-per-oz ranking logic
-* Safety + chemical constraints
-* Critic rewrite for chain integrity
-* LLM fallback for missing data
-* Scoring systems for final answers
+All prompts in `prompts/` directory:
+
+| File | Purpose | Lines |
+|------|---------|-------|
+| `system_router.md` | Intent extraction, safety screening | 80+ |
+| `system_planner.md` | Source selection, filter strategy | 100+ |
+| `system_answerer.md` | Response synthesis, grounding rules | 120+ |
+| `system_critic.md` | Quality validation, safety checks | 90+ |
+| `tool_call_instructions.md` | MCP tool schemas & best practices | 150+ |
+| `few_shots.jsonl` | Complete query examples | 5 |
+
+### Design Principles
+
+1. **Grounding**: Every claim traces to evidence
+2. **Citations**: doc_id for private, URL for web
+3. **Safety**: Deny chemical mixing, medical advice
+4. **Transparency**: Log all decisions
+5. **Fallbacks**: Regex/templates if LLM fails
+
+---
+
+## 🎬 Demo & Evaluation
+
+### 7-Minute Demo Script
+
+See `DEMO_GUIDE.md` for complete guide.
+
+**Outline**:
+1. Introduction (1 min)
+2. Architecture (1 min)
+3. Simple query (1.5 min)
+4. Hybrid query (1.5 min)
+5. Safety demo (0.5 min)
+6. Prompt disclosure (0.5 min)
+7. Results & limitations (1 min)
+
+### Testing
+
+```bash
+# Test MCP tools
+curl -X POST http://127.0.0.1:8000/rag.search \
+  -H "Content-Type: application/json" \
+  -d '{"query":"cleaner","top_k":3}'
+
+# Test components
+python -c "from tts_asr.asr_whisper import transcribe; print('✓ Whisper')"
+python -c "from graph.llm_client import get_llm_client; llm = get_llm_client(); print('✓ LLM')"
+```
+
+---
+
+## ⚙️ Configuration
+
+### LLM Providers (Model-Agnostic)
+
+**OpenAI** (default):
+```bash
+LLM_PROVIDER=openai
+LLM_MODEL=gpt-4o-mini
+OPENAI_API_KEY=sk-...
+```
+
+**Anthropic**:
+```bash
+LLM_PROVIDER=anthropic
+LLM_MODEL=claude-3-5-sonnet-20241022
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+**Local models** (vLLM, Ollama):
+```bash
+LLM_PROVIDER=local
+LLM_MODEL=llama-3.1-8b
+LLM_BASE_URL=http://localhost:11434/v1
+```
+
+---
+
+## 📊 Results
+
+### What Works ✅
+
+- End-to-end voice workflow
+- Multi-agent reasoning (LangGraph)
+- Grounded answers with citations
+- Model-agnostic (OpenAI, Claude tested)
+- MCP server (2 tools, logging, discovery)
+- Safety checks (chemical mixing, medical)
+- Transparent agent logs
+
+### Limitations ⚠️
+
+- Dataset lacks ratings/reviews
+- Fragment TTS (not streaming)
+- Sequential agents (no parallelism)
+- Basic title matching
+- Stateless queries
+
+### Future Work 🚧
+
+- Streaming audio (OpenAI Realtime)
+- Multi-turn conversations
+- Advanced RAG (reranking, expansion)
+- Product images, comparison tables
+- User preference memory
+- Production deployment
+
+---
+
+## 📚 Documentation
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)**: System design, data flow, components
+- **[DEMO_GUIDE.md](DEMO_GUIDE.md)**: Setup, demo script, troubleshooting
+- **[data/DATASET_SETUP.md](data/DATASET_SETUP.md)**: Dataset download guide
+- **[SAFETY.md](SAFETY.md)**: Safety considerations
+- **[prompts/](prompts/)**: Complete prompt disclosure
+
+---
+
+## 📜 License
+
+MIT License
+
+---
+
+## 🙏 Acknowledgments
+
+- Amazon Product Dataset 2020 (Kaggle)
+- LangGraph (agent orchestration)
+- ChromaDB (vector database)
+- OpenAI (Whisper, GPT, TTS)
+- Brave (web search API)
+
+---
+
+**Project**: Agentic Voice-to-Voice Product Discovery  
+**Course**: Generative AI, University of Chicago  
+**Date**: December 2025

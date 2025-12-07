@@ -87,6 +87,12 @@ def build_docs(df: pd.DataFrame):
     return docs
 
 
+def chunked(iterable, size):
+    """Yield successive chunks from an iterable."""
+    for i in range(0, len(iterable), size):
+        yield iterable[i : i + size]
+
+
 if __name__ == "__main__":
     # Load dataset
     df = pd.read_csv(DATA_PRODUCTS)
@@ -114,7 +120,11 @@ if __name__ == "__main__":
     if len(existing["ids"]) > 0:
         col.delete(ids=existing["ids"])
 
-    # Add all new items
-    col.add(ids=list(ids), documents=list(texts), metadatas=list(metas))
+    # Add in batches to respect Chroma batch limits
+    BATCH = 5000
+    for chunk_ids, chunk_texts, chunk_metas in zip(
+        chunked(list(ids), BATCH), chunked(list(texts), BATCH), chunked(list(metas), BATCH)
+    ):
+        col.add(ids=list(chunk_ids), documents=list(chunk_texts), metadatas=list(chunk_metas))
 
-    print(f"Indexed {len(ids)} items from HF dataset into Chroma collection 'amazon2020'.")
+    print(f"Indexed {len(ids)} items into Chroma collection 'amazon2020'.")

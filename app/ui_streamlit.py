@@ -14,7 +14,11 @@ if "graph" not in st.session_state:
 st.caption("Hold to record a short request, then click **Transcribe & Search**.")
 audio_bytes = st.audio_input("Record your voice")
 
-manual = st.text_input("Or type your request (fallback)", value="Recommend an eco-friendly stainless steel cleaner under $15.")
+manual = st.text_input(
+    "Or type your request (fallback)",
+    value="",
+    placeholder="e.g., Recommend an eco-friendly stainless steel cleaner under $15",
+)
 use_manual = st.toggle("Use typed request instead of ASR", value=True)
 
 if st.button("Transcribe & Search"):
@@ -29,7 +33,7 @@ if st.button("Transcribe & Search"):
         transcript = transcribe(audio_path, os.getenv("ASR_MODEL","small"))
         st.success("ASR complete.")
         st.write("**Transcript:**", transcript)
-    else:
+    elif transcript:
         st.write("**Transcript:**", transcript)
 
     state = {
