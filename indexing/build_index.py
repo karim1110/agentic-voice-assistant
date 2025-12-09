@@ -67,6 +67,7 @@ def build_docs(df: pd.DataFrame):
         # Metadata dict — all passed through safe_meta_value
         meta = {
             "sku": safe_meta_value(r.get("id")),
+            "title": safe_meta_value(r.get("title", "")),
             "brand": "",  # HF has no brand info
             "category": safe_meta_value(r.get("category")),
             "price": float(r.get("price")) if not pd.isna(r.get("price")) else 0.0,
