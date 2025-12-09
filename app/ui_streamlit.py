@@ -44,6 +44,19 @@ if st.button("Transcribe & Search"):
     }
     final = st.session_state.graph.invoke(state)
 
+    # Store ALL results in session state so they persist across reruns
+    st.session_state.final_results = final
+    
+    # Strip citation text like "(Sources: doc #xxx, www.yyy)" for clean TTS audio
+    import re
+    answer_text = final["answer"]
+    tts_text = re.sub(r'\(Sources?:.*?\)', '', answer_text).strip()
+    st.session_state.tts_answer = tts_text
+
+# Display results from session state (persists across TTS button clicks)
+if "final_results" in st.session_state:
+    final = st.session_state.final_results
+    
     st.subheader("Agent Steps")
     for step in final["log"]:
         st.json(step, expanded=False)
@@ -67,10 +80,6 @@ if st.button("Transcribe & Search"):
 
     st.subheader("Citations")
     st.write(final.get("citations", []))
-
-    # Store results in session state to preserve across reruns
-    st.session_state.tts_answer = final["answer"]
-    st.session_state.tts_path = final.get("tts_path")
 
 # Play TTS button outside the search block (won't trigger rerun of search)
 if "tts_answer" in st.session_state and st.button("🔊 Play TTS"):

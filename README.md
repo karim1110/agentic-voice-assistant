@@ -166,7 +166,7 @@ agentic-voice-assistant/
 ### Prerequisites
 
 - Python 3.10+
-- ffmpeg (for Whisper ASR)
+- ffmpeg (for Whisper ASR): `brew install ffmpeg`
 - 4GB+ RAM
 - OpenAI API key
 
