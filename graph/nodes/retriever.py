@@ -32,10 +32,13 @@ def retrieve(state):
     # Call RAG tool
     if "rag.search" in sources:
         start = time.time()
+        # ENFORCE: never send category filters (they don't match hierarchical paths)
+        filters = plan.get("filters", {})
+        filters.pop("category", None)  # strip category if present
         payload = {
             "query": plan.get("query_text", state.get("transcript", "")),
             "top_k": plan.get("top_k", 5),
-            "filters": plan.get("filters", {})
+            "filters": filters
         }
         
         results = call_tool(f"{base}/rag.search", payload)

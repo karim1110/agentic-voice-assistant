@@ -33,11 +33,6 @@ Build metadata filters for `rag.search`:
 - If budget specified: `{"price": {"$lte": <budget>}}`
 - Always include price in comparison
 
-**Category Filters**:
-- Map user intent to catalog categories
-- Example: "cleaner" → "Household Cleaning"
-- Example: "kitchen tool" → "Kitchen & Dining"
-
 **Material/Requirements**:
 - These become semantic search terms, not filters
 - Include in query text for better retrieval
