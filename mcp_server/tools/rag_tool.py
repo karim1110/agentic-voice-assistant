@@ -31,7 +31,11 @@ def normalize_filters(filters: dict | None) -> dict:
 
 def rag_search(query, top_k=5, filters=None):
     where = normalize_filters(filters)
-    res = col.query(query_texts=[query], n_results=top_k, where=where)
+    # Only pass where filter if it's not empty
+    if where:
+        res = col.query(query_texts=[query], n_results=top_k, where=where)
+    else:
+        res = col.query(query_texts=[query], n_results=top_k)
     out = []
     if not res["ids"] or not res["ids"][0]:
         return out
