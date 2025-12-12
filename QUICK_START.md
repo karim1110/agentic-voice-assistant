@@ -16,8 +16,8 @@ All configuration files have been created and the vector index has been built wi
    - Wait until you see: `INFO: Uvicorn running on http://127.0.0.1:8000`
 
 2. **Start Streamlit UI** (Terminal 2):
-   - Double-click `start_streamlit_ui.bat` OR
-   - Run in terminal: `.\start_streamlit_ui.bat`
+   - Double-click `start_streamlit_chat.bat` OR
+   - Run in terminal: `.\start_streamlit_chat.bat`
    - Browser should open automatically at http://localhost:8501
 
 ### Option 2: Manual Commands
@@ -33,7 +33,7 @@ python -m uvicorn mcp_server.server:app --host 127.0.0.1 --port 8000
 ```powershell
 cd "D:\UCHICAGO\UChicago Courses\Applied Generative AI Agents and Multimodal Intelligence\FinalProject\agentic-web-rag-with-voice"
 $env:PYTHONPATH = (Get-Location).Path
-python -m streamlit run app\ui_streamlit.py --server.port 8501
+python -m streamlit run app\ui_streamlit_chat.py --server.port 8501
 ```
 
 ## 🎯 Using the Application
@@ -98,7 +98,7 @@ Expected response: JSON with 3 product results
 agentic-web-rag-with-voice/
 ├── .env                      # ✅ API credentials
 ├── start_mcp_server.bat      # ✅ MCP server launcher
-├── start_streamlit_ui.bat    # ✅ UI launcher
+├── start_streamlit_chat.bat  # ✅ UI launcher
 ├── data/
 │   ├── processed/
 │   │   └── products.csv      # ✅ 10 sample products

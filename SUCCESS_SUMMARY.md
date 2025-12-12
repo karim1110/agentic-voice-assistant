@@ -61,7 +61,7 @@ cd "D:\UCHICAGO\UChicago Courses\Applied Generative AI Agents and Multimodal Int
 **Terminal 2 - Streamlit UI:**
 ```powershell
 cd "D:\UCHICAGO\UChicago Courses\Applied Generative AI Agents and Multimodal Intelligence\FinalProject\agentic-web-rag-with-voice"
-.\start_streamlit_ui.bat
+.\start_streamlit_chat.bat
 ```
 ✅ Browser opens automatically at http://localhost:8501
 
@@ -137,13 +137,13 @@ Voice Input → Whisper ASR → Router → Planner → Retriever → Answerer �
 
 ### **Batch Scripts:**
 - ✅ `start_mcp_server.bat` - MCP server launcher
-- ✅ `start_streamlit_ui.bat` - UI launcher
+- ✅ `start_streamlit_chat.bat` - UI launcher
 
 ### **Fixes Applied:**
 - ✅ `mcp_server/__init__.py` - Package structure
 - ✅ `mcp_server/tools/__init__.py` - Package structure
 - ✅ `mcp_server/tools/rag_tool.py` - Fixed empty filter bug
-- ✅ `app/ui_streamlit.py` - Improved error handling
+- ✅ `app/ui_streamlit_chat.py` - Improved error handling
 
 ### **Documentation:**
 - ✅ `QUICK_START.md` - Complete usage guide
